@@ -2,7 +2,7 @@ const path = require("path");
 const cors = require("cors");
 const fetch = require("node-fetch");
 const mongoose = require("mongoose");
-const Request = require("./models/request.model");
+const URLRequest = require("./models/request.model");
 const express = require("express");
 
 require("dotenv").config();
@@ -18,13 +18,31 @@ app.get("/heartbeat", (req, res) => {
 });
 
 app.get("/entries", async (req, res) => {
-    const entries = await Request.find();
+    const entries = await URLRequest.find();
     res.send(entries);
 });
 
 app.post("/request", (req, res) => {
+    console.log("Recieved new request:");
     console.log(req.body);
-    res.send({message: "Request recieved!"});
+    const {URL} = req.body;
+
+    if (URL.indexOf("herokuapp.com") === -1)
+        res.send({error: "Invalid URL!"});
+    else {
+        const newEntry = new URLRequest({URL})
+            .save((err, entry) => {
+                if (err) {
+                    console.log(err);
+                    res.send({error: "Duplicate entry detected!"});
+                } else {
+                    console.log("processed new entry:");
+                    console.log(entry);
+                    res.send({message: "Request recieved!"});
+                }
+        });
+    }
+
 });
 
 mongoose.connect(process.env.MONGODB_URI, {useNewUrlParser: true, useUnifiedTopology: true});

@@ -3,8 +3,9 @@ const mongoose = require("mongoose");
 const requestSchema = new mongoose.Schema({
     URL: {
         type: String,
-        required: true
+        required: true,
+        unique: true
     }
 });
 
-module.exports = mongoose.model("Request", requestSchema);
+module.exports = mongoose.model("URLRequest", requestSchema);
