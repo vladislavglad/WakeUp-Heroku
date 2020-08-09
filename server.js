@@ -7,6 +7,7 @@ const express = require("express");
 
 require("dotenv").config();
 const TIME_LIMIT = 25 * 60 * 1000;
+const HEARTBEAT_API = "https://check-heartbeat.herokuapp.com/heartbeat";
 
 const app = express();
 app.use(cors());
@@ -59,6 +60,8 @@ mongoose.connection.once("open", () => {
     app.listen(process.env.PORT || 3000, () => {
         console.log("Server has started!");
         wakeUp();
+        if (process.env.PRODUCTION === "true")
+            checkHeartbeat(TIME_LIMIT);
     });
 });
 
@@ -97,10 +100,13 @@ function wakeUp(interval = 60 * 1000) {
     }, interval);
 }
 
+// Keep heartbeat server active.
 function checkHeartbeat(interval = 30 * 1000) {
     setInterval(async () => {
         const res = await fetch(HEARTBEAT_API);
         const data = await res.json();
         console.log(data);
+        if (data.msg !== "Heartbeat server is up and running!") 
+            console.log("Heartbeat server is down... Wake it up!");
     }, interval);
 }

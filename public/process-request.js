@@ -1,5 +1,5 @@
 const form = document.querySelector("form");
-const API = "http://localhost:3000/request";
+const API = "https://wakeup-heroku.herokuapp.com/request";
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
