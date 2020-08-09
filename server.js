@@ -6,6 +6,7 @@ const URLRequest = require("./models/request.model");
 const express = require("express");
 
 require("dotenv").config();
+const TIME_LIMIT = 25 * 60 * 1000;
 
 const app = express();
 app.use(cors());
@@ -30,16 +31,20 @@ app.post("/request", (req, res) => {
     if (URL.indexOf("herokuapp.com") === -1)
         res.send({error: "Invalid URL!"});
     else {
-        const newEntry = new URLRequest({URL})
-            .save((err, entry) => {
-                if (err) {
-                    console.log(err);
-                    res.send({error: "Duplicate entry detected!"});
-                } else {
-                    console.log("processed new entry:");
-                    console.log(entry);
-                    res.send({message: "Request recieved!"});
-                }
+        fetch(URL); // Hit the url for the first time (non-bocking).
+        const newEntry = new URLRequest({
+            URL,
+            time: new Date()
+        })
+        .save((err, entry) => {
+            if (err) {
+                console.log(err);
+                res.send({error: "Duplicate entry detected!"});
+            } else {
+                console.log("processed new entry:");
+                console.log(entry);
+                res.send({message: "Request recieved!"});
+            }
         });
     }
 
@@ -53,5 +58,49 @@ mongoose.connection.once("open", () => {
     console.log("Connected to DB!");
     app.listen(process.env.PORT || 3000, () => {
         console.log("Server has started!");
+        wakeUp();
     });
 });
+
+function wakeUp(interval = 60 * 1000) {
+    setInterval(async () => {
+        const entries = await URLRequest.find();
+
+        entries.forEach(entry => {
+            const elapsedTime = new Date() - entry.time;
+            if (elapsedTime > TIME_LIMIT) {
+
+                /*Wake up a server at given url (non-blocking).
+                We don't really care what the server returns
+                as long as we hit any route and get something
+                even if this something is an error 
+                such as Cannot GET /someroute */
+                fetch(entry.URL) 
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log("" + entry.URL + " responded with:");
+                        console.log(data);
+                    })
+                    .catch(err => console.log(err)); 
+                
+                // Update entry.
+                entry.time = new Date();
+                entry.save((err, product) => {
+                    if (err) {
+                        console.log("Could not update " + product.URL);
+                        console.log(err);
+                    } else 
+                        console.log("" + product.URL + " Updated successfully.");
+                });
+            }
+        });
+    }, interval);
+}
+
+function checkHeartbeat(interval = 30 * 1000) {
+    setInterval(async () => {
+        const res = await fetch(HEARTBEAT_API);
+        const data = await res.json();
+        console.log(data);
+    }, interval);
+}

@@ -5,6 +5,10 @@ const requestSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true
+    },
+    time: {
+        type: Date,
+        required: true
     }
 });
 
