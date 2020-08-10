@@ -8,6 +8,7 @@ const express = require("express");
 require("dotenv").config();
 const TIME_LIMIT = 25 * 60 * 1000;
 const HEARTBEAT_API = "https://check-heartbeat.herokuapp.com/heartbeat";
+const self = "https://wakeup-heroku.herokuapp.com/heartbeat/";
 
 const app = express();
 app.use(cors());
@@ -59,6 +60,7 @@ mongoose.connection.once("open", () => {
     console.log("Connected to DB!");
     app.listen(process.env.PORT || 3000, () => {
         console.log("Server has started!");
+        selfCall(TIME_LIMIT);
         wakeUp();
         if (process.env.PRODUCTION === "true")
             checkHeartbeat(TIME_LIMIT);
@@ -109,4 +111,15 @@ function checkHeartbeat(interval = 30 * 1000) {
         if (data.msg !== "Heartbeat server is up and running!") 
             console.log("Heartbeat server is down... Wake it up!");
     }, interval);
+}
+
+// Keep calling 'self' to stay active/awake.
+function selfCall(interval = 30 * 1000) {
+    setInterval(() => {
+        console.log("Calling " + self);
+        fetch(self)
+            .then(res => res.json())
+            .then(data => console.log(data))
+            .catch(error => console.log(error));
+    }, interval)
 }
